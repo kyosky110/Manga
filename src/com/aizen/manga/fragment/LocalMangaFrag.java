@@ -53,7 +53,7 @@ public class LocalMangaFrag extends Fragment {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		mangadbmgr = new MangaDBManager(getActivity());
+		mangadbmgr = MangaDBManager.getInstance(getActivity());
 	}
 
 	@Override

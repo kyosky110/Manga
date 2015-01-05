@@ -81,7 +81,7 @@ public class MangaInfoFrag extends Fragment implements MultiChoiceModeListener {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		mangadbmgr = new MangaDBManager(getActivity());
+		mangadbmgr = MangaDBManager.getInstance(getActivity());
 		downloadManager = (DownloadManager) getActivity().getSystemService(
 				serviceString);
 	}

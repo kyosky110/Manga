@@ -11,7 +11,10 @@ import com.aizen.manga.DetailActivity;
 import com.aizen.manga.R;
 import com.aizen.manga.adapter.MangaListAdapter;
 import com.aizen.manga.module.Manga;
+import com.aizen.manga.sql.MangaDBManager;
+import com.aizen.manga.util.InitViewListener;
 import com.aizen.manga.util.NetAnalyse;
+import com.aizen.manga.util.TimeSaveToSharePerference;
 
 import android.app.Fragment;
 import android.content.Intent;
@@ -32,8 +35,10 @@ import com.nhaarman.listviewanimations.itemmanipulation.OnDismissCallback;
 import com.nhaarman.listviewanimations.swinginadapters.prepared.SwingBottomInAnimationAdapter;
 
 public class HotMangaFrag extends Fragment implements OnDismissCallback,
-		IXListViewListener {
+		IXListViewListener,InitViewListener {
 
+	private static final String REFRESH_TIME_HOT = "refresh_time_hot";
+	
 	MangaListAdapter mangasAdapter;
 	SwingBottomInAnimationAdapter swingBottomInAnimationAdapter;
 	ArrayList<Manga> mangas = new ArrayList<Manga>();
@@ -48,6 +53,8 @@ public class HotMangaFrag extends Fragment implements OnDismissCallback,
 	// private ProgressDialog dialog;
 
 	private static HotMangaFrag uniqueHotMangaFrag = null;
+	private View rootView;
+	private MangaDBManager db;
 
 	public static HotMangaFrag newInstance() {
 		if (uniqueHotMangaFrag == null) {
@@ -60,41 +67,73 @@ public class HotMangaFrag extends Fragment implements OnDismissCallback,
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState) {
 		super.onCreateView(inflater, container, savedInstanceState);
-		mangas = new ArrayList<Manga>();
+		this.rootView = inflater.inflate(R.layout.fragment_manga_list,container, false);
+		
 		page = 1;
-		View rootView = inflater.inflate(R.layout.fragment_manga_list,
-				container, false);
+		this.db = MangaDBManager.getInstance(getActivity());
+		
+		initView();
+		
+		initData();
+		
+		return rootView;
+	}
+	
+	/**
+	 * 初始化组件
+	 */
+	@Override
+	public void initView() {
+		
 		mangaListView = (XListView) rootView.findViewById(R.id.mangaList);
 		mangaListView.setPullLoadEnable(true);
 		mangaListView.setPullRefreshEnable(false);
-		int layoutID = R.layout.listview_mangalist;
 		mangaListView.setXListViewListener(this);
 		mangaListView.setOnItemClickListener(new OnItemClickListener() {
 			@Override
 			public void onItemClick(AdapterView<?> parent, View view,
 					int position, long id) {
-				// TODO Auto-generated method stub
 				// position位置从1开始是因为位置0被headview占用了
 				Intent it = new Intent(getActivity(), DetailActivity.class);
 				Bundle bundle = new Bundle();
-				bundle.putString(MangaInfoFrag.MANGA_LINK_STRING, 
-						getActivity().getString(R.string.domain)
-						+ mangas.get(position - 1).getLink());
+				bundle.putString(MangaInfoFrag.MANGA_LINK_STRING,getActivity().getString(R.string.domain)+mangas.get(position - 1).getLink());
 				it.putExtras(bundle); 
 				startActivity(it);
-				Toast.makeText(getActivity(),
-						mangas.get(position - 1).getLink(), Toast.LENGTH_SHORT)
-						.show();
+				Toast.makeText(getActivity(),mangas.get(position - 1).getLink(), Toast.LENGTH_SHORT).show();
 			}
 		});
+		
+		statusLayout = (RelativeLayout) getActivity().findViewById(R.id.ReadDataStatusLayout);
+		statusImageView = (ImageView) getActivity().findViewById(R.id.StatusImage);
+		statusTextView = (TextView) getActivity().findViewById(R.id.StatusText);
+	}
+
+	/**
+	 * 初始化数据
+	 */
+	@Override
+	public void initData() {
+		
+		if(this.mangas == null){
+			this.mangas = new ArrayList<Manga>();
+		}
+		mangas = this.db.queryAllMangas(REFRESH_TIME_HOT);
+		if(this.mangas.size() > 0){
+			statusLayout.setVisibility(View.GONE);
+		}
+		
+		int layoutID = R.layout.listview_mangalist;
 		mangasAdapter = new MangaListAdapter(getActivity(), layoutID, mangas);
 		swingBottomInAnimationAdapter = new SwingBottomInAnimationAdapter(mangasAdapter);
 		swingBottomInAnimationAdapter.setInitialDelayMillis(300);
 		swingBottomInAnimationAdapter.setAbsListView(mangaListView);
 		mangaListView.setAdapter(swingBottomInAnimationAdapter);
 
-		FRAG_STRING_URL = getActivity().getResources().getString(
-				R.string.hot_manga_list);
+		if(!TimeSaveToSharePerference.isRefresh(20, REFRESH_TIME_HOT, getActivity()) && page == 1){
+			return;
+		}
+		
+		FRAG_STRING_URL = getActivity().getResources().getString(R.string.hot_manga_list);
 		executorService.submit(new Runnable() {
 			@Override
 			public void run() {
@@ -104,44 +143,50 @@ public class HotMangaFrag extends Fragment implements OnDismissCallback,
 					// "none"));
 					refreshHotMangaList(page);
 				} catch (Exception e) {
-					// TODO Auto-generated catch block
 					somethingWrong();
 					e.printStackTrace();
 				}
 			}
 		});
-		return rootView;
 	}
 
 	@Override
 	public void onActivityCreated(Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
-		statusLayout = (RelativeLayout) getActivity().findViewById(R.id.ReadDataStatusLayout);
-		statusImageView = (ImageView) getActivity().findViewById(R.id.StatusImage);
-		statusTextView = (TextView) getActivity().findViewById(R.id.StatusText);
+//		statusLayout = (RelativeLayout) getActivity().findViewById(R.id.ReadDataStatusLayout);
+//		statusImageView = (ImageView) getActivity().findViewById(R.id.StatusImage);
+//		statusTextView = (TextView) getActivity().findViewById(R.id.StatusText);
 	}
 
 	public void refreshHotMangaList(int pagenum) throws Exception {
+		System.out.println("网络请求");
 		String hotMangaListURL = FRAG_STRING_URL + "-p" + pagenum;
-		final ArrayList<Manga> mangaDataList = NetAnalyse.parseHtmlToList(
-				hotMangaListURL, getActivity().getCacheDir().getAbsolutePath());
+		final ArrayList<Manga> mangaDataList = NetAnalyse.parseHtmlToList(hotMangaListURL, getActivity().getCacheDir().getAbsolutePath());
+		//如果有
+		if(mangaDataList.size() > 0 && page == 1){
+			
+			this.db.deleteAll();
+			
+			for(Manga m:mangaDataList){
+				m.setType(REFRESH_TIME_HOT);
+				this.db.add(m);
+			}
+		}
 		try {
-			// TODO Auto-generated method stub
 			handler.post(new Runnable() {
 				@Override
 				public void run() {
-					// TODO Auto-generated method stub
 					// mangas.add(new Manga("", "naruto", "anben", "9.9",
 					// "none"));
 					statusLayout.setVisibility(View.GONE);
 					mangas.addAll(mangaDataList);
 					mangasAdapter.notifyDataSetChanged();
 					swingBottomInAnimationAdapter.notifyDataSetChanged();
+					TimeSaveToSharePerference.setRefreshTime(REFRESH_TIME_HOT, getActivity());
 					// dialog.dismiss();
 				}
 			});
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			somethingWrong();
 			e.printStackTrace();
 		}
@@ -150,7 +195,6 @@ public class HotMangaFrag extends Fragment implements OnDismissCallback,
 	@Override
 	public void onDismiss(final AbsListView listView,
 			final int[] reverseSortedPositions) {
-		// TODO Auto-generated method stub
 		for (int position : reverseSortedPositions) {
 			mangas.remove(position);
 			mangasAdapter.notifyDataSetChanged();
@@ -165,7 +209,6 @@ public class HotMangaFrag extends Fragment implements OnDismissCallback,
 
 	@Override
 	public void onLoadMore() {
-		// TODO Auto-generated method stub
 		page++;
 		executorService.submit(new Runnable() {
 			@Override
@@ -174,7 +217,6 @@ public class HotMangaFrag extends Fragment implements OnDismissCallback,
 					System.out.println(page);
 					refreshHotMangaList(page);
 				} catch (Exception e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 					somethingWrong();
 				}
@@ -187,4 +229,5 @@ public class HotMangaFrag extends Fragment implements OnDismissCallback,
 		statusTextView.setText(getResources().getString(R.string.status_text_wrong));
 		statusLayout.setVisibility(View.VISIBLE);
 	}
+
 }

@@ -50,7 +50,7 @@ public class MyMangaFrag extends Fragment implements OnDismissCallback,
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		mangadbmgr = new MangaDBManager(getActivity());
+		mangadbmgr = MangaDBManager.getInstance(getActivity());
 	}
 
 	@Override

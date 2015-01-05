@@ -32,7 +32,9 @@ public class MangaSQLOpenHelper extends SQLiteOpenHelper {
 				+ "coverURL VARCHAR, "
 				+ "updateto VARCHAR, "
 				+ "isLike BOOLEAN, "
-				+ "lastRead VARCHAR)");
+				+ "lastRead VARCHAR," 
+				+ "type VARCHAR"
+				+ ")");
 		db.execSQL("CREATE TABLE IF NOT EXISTS local "
 				+ "(_id VARCHAR PRIMARY KEY, " 
 				+ "name VARCHAR, "
@@ -44,7 +46,9 @@ public class MangaSQLOpenHelper extends SQLiteOpenHelper {
 
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-		db.execSQL("ALTER TABLE manga ADD COLUMN other STRING");  
+//		db.execSQL("ALTER TABLE manga ADD COLUMN other STRING");  
+		db.execSQL("DROP TABLE IF EXISTS manga");
+		onCreate(db);
 	}
 
 }

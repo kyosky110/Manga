@@ -26,6 +26,15 @@ public class Manga {
 	private ArrayList<Chapter> chapters;
 	private String lastRead;
 	private int downloadCount;
+	private String type;
+	
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
 
 	public Manga(String id, String name, String author, String publishDate,
 			String updateDate, String lcoation, String tag, String otherName,
