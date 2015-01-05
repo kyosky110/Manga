@@ -11,12 +11,10 @@ public class MangaSQLOpenHelper extends SQLiteOpenHelper {
 
 	public MangaSQLOpenHelper(Context context) {
 		super(context, DATABASE_NAME, null, DATABASE_VERSION);
-		// TODO Auto-generated constructor stub
 	}
 
 	@Override
 	public void onCreate(SQLiteDatabase db) {
-		// TODO Auto-generated method stub
 		db.execSQL("CREATE TABLE IF NOT EXISTS manga "
 				+ "(_id VARCHAR PRIMARY KEY, " 
 				+ "name VARCHAR, "
@@ -46,7 +44,6 @@ public class MangaSQLOpenHelper extends SQLiteOpenHelper {
 
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-		// TODO Auto-generated method stub
 		db.execSQL("ALTER TABLE manga ADD COLUMN other STRING");  
 	}
 
